@@ -191,6 +191,33 @@ def ordered_run_info(disorder_score, threshold=0.5):
     return (int(lengths[idx]), int(starts[idx]), int(ends[idx]))
 
 
+def ordered_segments_info(disorder_score, threshold=0.5, min_run=0):
+    """Return ALL maximal runs of ordered residues (disorder_score <= threshold)
+    with length >= min_run, as [start, end_exclusive] pairs in chain order.
+    Mirrors ordered_run_info boundary logic but keeps every passing run.
+    Returns [] on parse failure or no ordered residues. Accepts a stringified
+    list (CSV) or a pre-parsed list/array (Parquet)."""
+    if disorder_score is None or (isinstance(disorder_score, float) and np.isnan(disorder_score)):
+        return []
+    if isinstance(disorder_score, str):
+        try:
+            scores = ast.literal_eval(disorder_score)
+        except (ValueError, SyntaxError):
+            return []
+    else:
+        scores = disorder_score
+    if not hasattr(scores, "__len__") or len(scores) == 0:
+        return []
+    arr = np.asarray(scores, dtype=float)
+    ordered = arr <= threshold
+    if not ordered.any():
+        return []
+    diff = np.diff(ordered.astype(np.int8), prepend=0, append=0)
+    starts = np.where(diff == 1)[0]
+    ends = np.where(diff == -1)[0]
+    return [[int(st), int(en)] for st, en in zip(starts, ends) if (en - st) >= min_run]
+
+
 def _parse_array(value):
     """Return a numpy float array from either a string (CSV) or a pre-parsed list/array (Parquet)."""
     if isinstance(value, str):
@@ -234,6 +261,10 @@ def load_and_prefilter_dataset(data_dir, base_name, source_label,
             df["longest_ordered_run"] = run_info.apply(lambda t: t[0])
             df["ordered_run_start"] = run_info.apply(lambda t: t[1])
             df["ordered_run_end"] = run_info.apply(lambda t: t[2])
+            seg_info = df["disorder_score"].apply(
+                lambda x: ordered_segments_info(x, disorder_threshold, ordered_run_min))
+            df["ordered_segments"] = seg_info.apply(json.dumps)
+            df["n_ordered_segments"] = seg_info.apply(len)
             if abs(disorder_threshold - PRECOMPUTED_MASK_THRESHOLD) > 1e-9:
                 df["masked_mean_plddt"] = [
                     _recompute_masked_plddt(ds, pl, disorder_threshold)
@@ -283,6 +314,10 @@ def load_and_prefilter_dataset(data_dir, base_name, source_label,
     df["longest_ordered_run"] = run_info.apply(lambda t: t[0])
     df["ordered_run_start"] = run_info.apply(lambda t: t[1])
     df["ordered_run_end"] = run_info.apply(lambda t: t[2])
+    seg_info = df["disorder_score"].apply(
+        lambda x: ordered_segments_info(x, disorder_threshold, ordered_run_min))
+    df["ordered_segments"] = seg_info.apply(json.dumps)
+    df["n_ordered_segments"] = seg_info.apply(len)
 
     if abs(disorder_threshold - PRECOMPUTED_MASK_THRESHOLD) > 1e-9:
         df["masked_mean_plddt"] = [
