@@ -1,0 +1,49 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+# data / large artifacts
+*.csv
+*.tsv
+*.parquet
+*.feather
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.zip
+*.pdb
+*.cif
+*.mmcif
+*.fasta
+*.fa
+*.a3m
+*.sto
+# notebooks / images
+*.ipynb
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pdf
+# logs / outputs / caches
+*.log
+*.out
+*.err
+.uniprot_cache/
+afdb/
+output*/
+results/
+logs/
+# model weights: ignore generic, force-keep the two needed ones
+*.pt
+*.pth
+*.ckpt
+!data/decoder.pt
+!data/embedding.pt
