@@ -69,6 +69,7 @@ def main():
     ap.add_argument("--min_run", type=int, default=0)
     ap.add_argument("--gpu", type=int, default=0)
     ap.add_argument("--limit", type=int, default=0, help="annotate only the first N rows (0 = all)")
+    ap.add_argument("--no_smoothing", action="store_true", help="disable AIUPred savgol smoothing (default: smoothing ON)")
     args = ap.parse_args()
 
     df = pd.read_csv(args.csv)
@@ -86,7 +87,7 @@ def main():
             seqs.append(""); disorders.append(""); segs.append("[]"); nsegs.append(0); longest.append(0); seqlens.append(0)
             continue
         seq = extract_sequence(cif, chain)
-        ds = np.asarray(aiupred_lib.predict_disorder(seq, em, rm, dev, no_smoothing=True), dtype=float)
+        ds = np.asarray(aiupred_lib.predict_disorder(seq, em, rm, dev, no_smoothing=args.no_smoothing), dtype=float)
         seg = ordered_segments_info(ds, args.threshold, args.min_run)
         seqs.append(seq)
         disorders.append(json.dumps([round(float(x), 4) for x in ds]))
